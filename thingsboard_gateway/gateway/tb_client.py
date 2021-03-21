@@ -46,12 +46,13 @@ class TBClient(threading.Thread):
         self.__ca_cert = None
         self.__private_key = None
         self.__cert = None
-        self.__token = None
+        self.__cert = None
+        self.__token = os.getenv(TB_TOKEN)
         self.__is_connected = False
         self.__stopped = False
         self.__paused = False
-        if credentials.get("accessToken", os.getenv(TB_TOKEN)) is not None:
-            self.__token = str(credentials.get("accessToken", os.getenv(TB_TOKEN)))
+        if (credentials.get("accessToken") is not None) and (self.__token is None):
+            self.__token = credentials.get("accessToken")
         self.client = TBGatewayMqttClient(self.__host, self.__port, self.__token, self, quality_of_service=self.__default_quality_of_service)
         if self.__tls:
             self.__ca_cert = credentials.get("caCert")
