@@ -12,15 +12,24 @@
 #     See the License for the specific language governing permissions and
 #     limitations under the License.
 
+#     Modified by Field Electronics to facilitate the setting of the Thingsboard Host URL, Port and Token
+#     through Environment variables so that these can be managed by BalenaCloud.
+#     To force using Environment Variables, comment out the setting in the Gateway.yaml file.
+
 import time
 import threading
 import logging
+import os
 from ssl import SSLContext, PROTOCOL_TLSv1_2, CERT_REQUIRED
 
 from thingsboard_gateway.tb_client.tb_gateway_mqtt import TBGatewayMqttClient
 
 log = logging.getLogger("tb_connection")
 
+# Define 'constants' for TB Environment variables (these should match BalenaCloud Device Variables for the same)
+TB_HOST = 'TB_HOST'
+TB_PORT = 'TB_PORT'
+TB_TOKEN = 'TB_TOKEN'
 
 class TBClient(threading.Thread):
     def __init__(self, config):
@@ -28,8 +37,8 @@ class TBClient(threading.Thread):
         self.setName('Connection thread.')
         self.daemon = True
         self.__config = config
-        self.__host = config["host"]
-        self.__port = config.get("port", 1883)
+        self.__host = config.get("host", os.getenv(TB_HOST))
+        self.__port = int(config.get("port", os.getenv(TB_PORT, 1883)))
         self.__default_quality_of_service = config.get("qos", 1)
         credentials = config["security"]
         self.__min_reconnect_delay = 1
@@ -37,12 +46,13 @@ class TBClient(threading.Thread):
         self.__ca_cert = None
         self.__private_key = None
         self.__cert = None
-        self.__token = None
+        self.__cert = None
+        self.__token = os.getenv(TB_TOKEN)
         self.__is_connected = False
         self.__stopped = False
         self.__paused = False
-        if credentials.get("accessToken") is not None:
-            self.__token = str(credentials["accessToken"])
+        if (credentials.get("accessToken") is not None) and (self.__token is None):
+            self.__token = credentials.get("accessToken")
         self.client = TBGatewayMqttClient(self.__host, self.__port, self.__token, self, quality_of_service=self.__default_quality_of_service)
         if self.__tls:
             self.__ca_cert = credentials.get("caCert")
